@@ -1,11 +1,12 @@
 // POST /api/gen-code  (需主系统密码 x-admin-pwd)
 // 生成授权码, 存 inviteCodes
-import { json, readKV, writeKV, genCode } from './_lib.js';
+import { json, readKV, writeKV, genCode, readConfig } from './_lib.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const cfg = await readConfig(env);
   const auth = request.headers.get('x-admin-pwd');
-  if (!auth || auth !== env.ADMIN_PWD) {
+  if (!auth || auth !== cfg.ADMIN_PWD) {
     return json(401, { success: false, message: '主系统密码错误' });
   }
 

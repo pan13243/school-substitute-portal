@@ -1,0 +1,5 @@
+﻿主系统门户: 配置改从 master KV 读取
+
+- _lib.js cf* 函数内部读 config (CF_TOKEN/CF_ACCOUNT_ID)
+- gen-code.js/schools.js 主系统密码从 readConfig 读
+- 绕开 CF Pages env_vars API 格式限制, 配置存 master KV config key
