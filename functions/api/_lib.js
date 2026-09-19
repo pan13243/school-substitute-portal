@@ -12,13 +12,13 @@ export function json(status, obj) {
 async function getConfig(env) {
   const v = await env.MASTER_KV.get('config');
   if (!v) return {};
-  try { return JSON.parse(v); } catch (e) { return {}; }
+  try { const p = JSON.parse(v); return (p && typeof p === 'object') ? p : {}; } catch (e) { return {}; }
 }
 
 export async function readKV(env, key) {
   const v = await env.MASTER_KV.get(key);
   if (!v) return [];
-  try { return JSON.parse(v); } catch (e) { return []; }
+  try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch (e) { return []; }
 }
 
 export async function writeKV(env, key, val) {

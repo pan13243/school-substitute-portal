@@ -1,0 +1,5 @@
+﻿主系统门户: readKV/getConfig 加类型防御
+
+- readKV: JSON.parse 非数组返回 []
+- getConfig: JSON.parse 非对象返回 {}
+- 防止 master KV 脏数据(null)导致 .some 崩溃
