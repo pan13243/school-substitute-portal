@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>主系统管理 - 授权码</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f4f8; color: #1f2937; padding: 20px; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 6px; }
+  .sub { color: #6b7280; font-size: 13px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.06); padding: 20px; margin-bottom: 18px; }
+  h2 { font-size: 16px; margin-bottom: 14px; }
+  input { padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; }
+  input:focus { border-color: #2563eb; }
+  button { padding: 10px 16px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: none; }
+  .msg.ok { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .msg.err { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef2f7; }
+  th { color: #6b7280; font-weight: 600; background: #f9fafb; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; }
+  .badge.on { background: #dcfce7; color: #166534; }
+  .badge.off { background: #fee2e2; color: #991b1b; }
+  .badge.used { background: #e0e7ff; color: #3730a3; }
+  .badge.free { background: #f1f5f9; color: #64748b; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+  .hidden { display: none; }
+  .code-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .code-chip { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 6px 10px; border-radius: 8px; font-family: monospace; font-size: 14px; font-weight: 600; }
+  a { color: #2563eb; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>主系统管理后台</h1>
+  <div class="sub">授权码生成 · 学校列表 · 主系统管理员专用</div>
+
+  <!-- 登录 -->
+  <div class="card" id="login-card">
+    <h2>登录</h2>
+    <div class="row">
+      <input id="admin-pwd" type="password" placeholder="主系统密码" style="min-width:220px">
+      <button onclick="doLogin()">登录</button>
+    </div>
+    <div class="msg" id="msg-login"></div>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="card hidden" id="main-card">
+    <h2>生成授权码</h2>
+    <div class="row">
+      <input id="code-count" type="number" value="1" min="1" max="50" style="width:90px">
+      <button onclick="genCode()">生成</button>
+      <span class="sub" style="margin:0">每个授权码可激活 1 所学校, 单次使用</span>
+    </div>
+    <div class="msg" id="msg-gen"></div>
+    <div class="code-list" id="code-list"></div>
+
+    <div class="divider" style="height:1px;background:#e5e7eb;margin:22px 0"></div>
+
+    <h2>学校列表</h2>
+    <div id="schools-table"></div>
+  </div>
+</div>
+
+<script>
+let ADMIN_PWD = '';
+
+function setMsg(id, text, ok) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+}
+
+async function doLogin() {
+  const pwd = document.getElementById('admin-pwd').value;
+  if (!pwd) { setMsg('msg-login', '请输入密码', false); return; }
+  const r = await fetch('/api/schools', { headers: { 'x-admin-pwd': pwd } });
+  if (r.status === 401) { setMsg('msg-login', '密码错误', false); return; }
+  if (!r.ok) { setMsg('msg-login', '请求失败', false); return; }
+  ADMIN_PWD = pwd;
+  document.getElementById('login-card').classList.add('hidden');
+  document.getElementById('main-card').classList.remove('hidden');
+  loadData();
+}
+
+async function genCode() {
+  const count = parseInt(document.getElementById('code-count').value) || 1;
+  const r = await fetch('/api/gen-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-pwd': ADMIN_PWD },
+    body: JSON.stringify({ count })
+  });
+  const j = await r.json();
+  if (j.success) {
+    setMsg('msg-gen', '已生成 ' + j.codes.length + ' 个授权码, 发给学校管理员即可', true);
+    const box = document.getElementById('code-list');
+    box.innerHTML = '';
+    j.codes.forEach(c => { const el = document.createElement('span'); el.className = 'code-chip'; el.textContent = c; box.appendChild(el); });
+    loadData();
+  } else {
+    setMsg('msg-gen', j.message || '生成失败', false);
+  }
+}
+
+async function loadData() {
+  const r = await fetch('/api/schools', { headers: { 'x-admin-pwd': ADMIN_PWD } });
+  const j = await r.json();
+  if (!j.success) return;
+  const codes = j.codes || [];
+  const schools = j.schools || [];
+
+  const freeCount = codes.filter(c => !c.used).length;
+  let html = '<p class="sub" style="margin:0 0 10px">授权码: 共 ' + codes.length + ' 个, 未用 ' + freeCount + ' 个 | 学校: ' + schools.length + ' 所</p>';
+  html += '<table><thead><tr><th>学校名称</th><th>手机号</th><th>状态</th><th>子系统地址</th><th>到期</th></tr></thead><tbody>';
+  schools.forEach(s => {
+    const badge = s.active ? '<span class="badge on">已激活</span>' : '<span class="badge off">待激活</span>';
+    const url = s.active && s.url ? '<a href="' + s.url + '" target="_blank">' + s.url.replace('https://','') + '</a>' : '-';
+    const exp = s.expiresAt ? s.expiresAt.slice(0,10) : '-';
+    html += '<tr><td>' + esc(s.schoolName) + '</td><td>' + esc(s.phone) + '</td><td>' + badge + '</td><td>' + url + '</td><td>' + exp + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('schools-table').innerHTML = html;
+}
+
+function esc(t) { return (t||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+</script>
+</body>
+</html>

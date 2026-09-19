@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代课调课系统 - 学校注册</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f4f8; color: #1f2937; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); width: 100%; max-width: 420px; padding: 28px 24px; }
+  h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
+  .sub { text-align: center; color: #6b7280; font-size: 13px; margin-bottom: 22px; }
+  label { display: block; font-size: 13px; color: #374151; margin: 14px 0 6px; font-weight: 600; }
+  input { width: 100%; padding: 11px 12px; border: 1px solid #d1d5db; border-radius: 9px; font-size: 15px; outline: none; transition: border-color .15s; }
+  input:focus { border-color: #2563eb; }
+  button { width: 100%; padding: 12px; margin-top: 18px; background: #2563eb; color: #fff; border: none; border-radius: 9px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  button:hover { background: #1d4ed8; }
+  button:disabled { background: #9ca3af; cursor: not-allowed; }
+  .msg { margin-top: 14px; padding: 10px 12px; border-radius: 9px; font-size: 13px; line-height: 1.5; display: none; }
+  .msg.ok { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .msg.err { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .step { display: none; }
+  .step.active { display: block; }
+  .url-box { margin-top: 14px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 9px; padding: 12px; word-break: break-all; font-size: 14px; }
+  .url-box a { color: #2563eb; font-weight: 600; text-decoration: none; }
+  .divider { height: 1px; background: #e5e7eb; margin: 22px 0; }
+  .hint { font-size: 12px; color: #9ca3af; margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>代课调课系统</h1>
+  <div class="sub">学校注册 · 独立子系统一键开通</div>
+
+  <!-- Step 1: 注册 -->
+  <div class="step active" id="step-register">
+    <label>学校名称</label>
+    <input id="schoolName" placeholder="如: 凯里市第二小学">
+    <label>管理员手机号 (账户名)</label>
+    <input id="phone" placeholder="11 位手机号" inputmode="numeric">
+    <label>登录密码 (至少 6 位)</label>
+    <input id="adminPwd" type="password" placeholder="设置管理员密码">
+    <label>确认密码</label>
+    <input id="adminPwd2" type="password" placeholder="再次输入密码">
+    <button id="btn-register" onclick="doRegister()">注册</button>
+    <div class="msg" id="msg-register"></div>
+  </div>
+
+  <!-- Step 2: 激活 -->
+  <div class="step" id="step-activate">
+    <div class="divider"></div>
+    <div class="msg ok" id="msg-after-register" style="display:block">注册成功! 请联系主系统管理员获取授权码, 填到下方激活</div>
+    <label>管理员手机号</label>
+    <input id="act-phone" placeholder="注册时的手机号">
+    <label>授权码</label>
+    <input id="act-code" placeholder="主系统管理员提供的 8 位授权码" style="text-transform:uppercase">
+    <button id="btn-activate" onclick="doActivate()">填写授权码并激活</button>
+    <div class="msg" id="msg-activate"></div>
+  </div>
+
+  <!-- Step 3: 成功 -->
+  <div class="step" id="step-done">
+    <div class="divider"></div>
+    <div class="msg ok" id="msg-done" style="display:block">🎉 激活成功! 您的独立子系统已开通</div>
+    <label>子系统地址</label>
+    <div class="url-box"><a id="done-url" href="#" target="_blank"></a></div>
+    <label>管理员初始密码</label>
+    <div class="url-box" id="done-pwd"></div>
+    <div class="hint">请用上面的地址 + 密码登录。首次登录后可在系统内修改密码。子系统有效期 365 天。</div>
+  </div>
+</div>
+
+<script>
+function show(id) { document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function setMsg(id, text, ok) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+}
+
+async function doRegister() {
+  const schoolName = document.getElementById('schoolName').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const pwd = document.getElementById('adminPwd').value;
+  const pwd2 = document.getElementById('adminPwd2').value;
+  const btn = document.getElementById('btn-register');
+  if (!schoolName || !phone || !pwd) { setMsg('msg-register', '请填写所有字段', false); return; }
+  if (!/^\d{6,20}$/.test(phone)) { setMsg('msg-register', '手机号格式错误', false); return; }
+  if (pwd.length < 6) { setMsg('msg-register', '密码至少 6 位', false); return; }
+  if (pwd !== pwd2) { setMsg('msg-register', '两次密码不一致', false); return; }
+  btn.disabled = true; btn.textContent = '注册中...';
+  try {
+    const r = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolName, phone, adminPwd: pwd }) });
+    const j = await r.json();
+    if (j.success) {
+      document.getElementById('act-phone').value = phone;
+      show('step-activate');
+      setMsg('msg-activate', '', true);
+    } else {
+      setMsg('msg-register', j.message || '注册失败', false);
+    }
+  } catch (e) {
+    setMsg('msg-register', '网络错误: ' + e.message, false);
+  } finally {
+    btn.disabled = false; btn.textContent = '注册';
+  }
+}
+
+async function doActivate() {
+  const phone = document.getElementById('act-phone').value.trim();
+  const code = document.getElementById('act-code').value.trim().toUpperCase();
+  const btn = document.getElementById('btn-activate');
+  if (!phone || !code) { setMsg('msg-activate', '请填写手机号和授权码', false); return; }
+  btn.disabled = true; btn.textContent = '开通中...';
+  try {
+    const r = await fetch('/api/activate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, code }) });
+    const j = await r.json();
+    if (j.success) {
+      document.getElementById('done-url').textContent = j.url;
+      document.getElementById('done-url').href = j.url;
+      document.getElementById('done-pwd').textContent = j.adminPwd;
+      show('step-done');
+    } else {
+      setMsg('msg-activate', j.message || '激活失败', false);
+    }
+  } catch (e) {
+    setMsg('msg-activate', '网络错误: ' + e.message, false);
+  } finally {
+    btn.disabled = false; btn.textContent = '填写授权码并激活';
+  }
+}
+</script>
+</body>
+</html>

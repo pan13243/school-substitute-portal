@@ -1,0 +1,9 @@
+﻿主系统门户: 注册+授权码激活+学校列表 API
+
+- index.html 注册+激活同页流程
+- admin.html 主系统管理(生成授权码/学校列表, 需主系统密码)
+- functions/api/register.js 注册存账户(active:false)
+- functions/api/gen-code.js 生成授权码(需主系统密码)
+- functions/api/activate.js 校验授权码+调CF API开通独立子系统
+- functions/api/schools.js 学校列表(需主系统密码)
+- functions/api/_lib.js 共享CF API+KV库
