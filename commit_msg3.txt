@@ -1,0 +1,1 @@
+﻿register.js 加 try/catch 返回错误详情 (定位 500)
